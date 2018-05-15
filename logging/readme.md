@@ -62,3 +62,65 @@ logging.warning('And this, too')
 дата и время возможно будут другими. Этот способ конфигурирования на сколько прост, настолько же не понятен и не гибок, предлагаю перейти к следующему способу.
 ### [getLogger](https://docs.python.org/3/library/logging.html#logger-objects)
 Этот способ открывает весь набор инструментов библиотеки. Для использования необходимо создать логгер, создать и добавить обработчики, фильтры и шаблон форматирования. Да, у одного логгера может быть несколько обработчиков. И снова пример:
+```
+import logging
+
+# создание логгера с именем "main" (может быть любым)
+logger = logging.getLogger('main')
+# установка уровня логирования
+logger.setLevel(logging.DEBUG)
+
+# создание обработчика с логированием в консоль
+cons_handler = logging.StreamHandler()
+# установка уровня логирования конкретно этого обработчика
+cons_handler.setLevel(logging.DEBUG)
+
+# создание обработчика с логированием в файл "2_example.log"
+file_handler = logging.FileHandler("3_example.log", mode="a")
+file_handler.setLevel(logging.WARNING)
+
+# создание шаблона отображения
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# связвание обработчиков с шаблоном форматирования
+cons_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)
+
+# добавление обработчиков логгеру
+logger.addHandler(cons_handler)
+logger.addHandler(file_handler)
+
+# использование логгера
+logger.debug('debug message')
+logger.info('info message')
+logger.warn('warn message')
+logger.error('error message')
+logger.critical('critical message')
+```
+По коду должно быть все понятно из комментариев, в результате выполнения получим в консоль:
+```
+2018-05-15 22:40:07,974 - main - DEBUG - debug message
+2018-05-15 22:40:07,974 - main - INFO - info message
+2018-05-15 22:40:07,974 - main - WARNING - warn message
+2018-05-15 22:40:07,975 - main - ERROR - error message
+2018-05-15 22:40:07,975 - main - CRITICAL - critical message
+```
+и файл с именем `3_example.log` с содержимым:
+```
+2018-05-15 22:40:07,974 - main - WARNING - warn message
+2018-05-15 22:40:07,975 - main - ERROR - error message
+2018-05-15 22:40:07,975 - main - CRITICAL - critical message
+```
+Хочу пояснить следующие моменты:
+* Первым делом получаем логгер - экземпляр класса Logger с именем `main`. Причем действует правило: одно имя - один экземпляр. Это означает что при первом вызове метода логгер создается, а при последующих передается уже созданный экземпляр логгера. На практике это означает что достаточно вызвать и настроить логгер в одном месте (модуле), выполнить этот код (импортировать модуль), во всех последующих местах вызывать настроеный логгер и... просто логировать.
+* Далее получаем обработчики. Полный список с описанием [здесь](https://docs.python.org/3/library/logging.handlers.html) их много и они разные: вывод в консоль, запись в файл (возможно с ротацией логов), отправка через сокет, http, UDP, отправка письмом, чтение/запись в очередь и т.д. Далее в приимерах будут те что пользовался я сам. Нужно четко понимать что у логгера может быть множество обработчиков, каждый обработчик может иметь свой шаблон сообщения, уровень логирования и фильтрацию.
+* И наконец получаем шаблоны сообщений. Параметры для шаблонов [здесь](https://docs.python.org/3/library/logging.html?highlight=logging%20formatter#logrecord-attributes), основные параметры далее в примерах примерах.
+> Оптимизация. Процесс подстановки аргументов в шаблон ленивый, и произойдет только если запись действительно будет обрабатываться, однако вычисление аргуменов для логирования может быть долгим. Для того чтобы не терять время можно воспользоваться методом `isEnabledFor` логгера, который принимает уровень логирования, проверяет будет ли производится запись и возвращает ответ в `True` или `False`. Например:
+```if logger.isEnabledFor(logging.DEBUG):
+    logger.debug('Message with %s', expensive_func())
+```
+
+### [dictConfig](https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig)
+Мой любимый способ. Сразу к примеру:
+```
+```

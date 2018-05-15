@@ -6,25 +6,26 @@ logger = logging.getLogger('main')
 logger.setLevel(logging.DEBUG)
 
 # создание обработчика с логированием в консоль
-ch = logging.StreamHandler()
+cons_handler = logging.StreamHandler()
 # установка уровня логирования конкретно этого обработчика
-ch.setLevel(logging.DEBUG)
+cons_handler.setLevel(logging.DEBUG)
+
 # создание обработчика с логированием в файл "2_example.log"
 file_handler = logging.FileHandler("3_example.log", mode="a")
 file_handler.setLevel(logging.WARNING)
 
-# создание шаблона
+# создание шаблона отображения
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # связвание обработчиков с шаблоном форматирования
-ch.setFormatter(formatter)
+cons_handler.setFormatter(formatter)
 file_handler.setFormatter(formatter)
 
-# add ch to logger
-logger.addHandler(ch)
+# добавление обработчиков логгеру
+logger.addHandler(cons_handler)
 logger.addHandler(file_handler)
 
-# 'application' code
+# использование логгера
 logger.debug('debug message')
 logger.info('info message')
 logger.warn('warn message')
