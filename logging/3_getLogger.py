@@ -1,7 +1,7 @@
 import logging
 
 # создание логгера с именем "main" (может быть любым)
-logger = logging.getLogger('main')
+logger = logging.getLogger("main")
 # установка уровня логирования
 logger.setLevel(logging.DEBUG)
 
@@ -15,7 +15,7 @@ file_handler = logging.FileHandler("3_example.log", mode="a")
 file_handler.setLevel(logging.WARNING)
 
 # создание шаблона отображения
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 # связвание обработчиков с шаблоном форматирования
 cons_handler.setFormatter(formatter)
@@ -26,8 +26,8 @@ logger.addHandler(cons_handler)
 logger.addHandler(file_handler)
 
 # использование логгера
-logger.debug('debug message')
-logger.info('info message')
-logger.warn('warn message')
-logger.error('error message')
-logger.critical('critical message')
+logger.debug("debug message")
+logger.info("info message")
+logger.warn("warn message")
+logger.error("error message")
+logger.critical("critical message")
