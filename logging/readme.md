@@ -125,4 +125,124 @@ if logger.isEnabledFor(logging.DEBUG):
 ### [dictConfig](https://docs.python.org/3/library/logging.config.html#logging.config.dictConfig)
 Мой любимый способ. Сразу к примеру:
 ```
+import logging
+import logging.config
+
+DEBUG = True
+
+LOGGING_CONF = {
+    "disable_existing_loggers": True,
+    "version": 1,
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)-8s %(asctime)s [%(filename)s:%(lineno)d] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S",
+        },
+        "brief": {
+            "format": "%(levelname)-8s %(asctime)s %(name)-16s %(message)s",
+        }
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "other_cons": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "brief",
+        },
+    },
+    "loggers": {
+        "main": {
+            "level": "INFO",
+            "handlers": ["console"],
+        },
+        "slave": {
+            "level": "DEBUG" if DEBUG else "INFO",
+            "handlers": ["other_cons"],
+        },
+    },
+}
+
+logging.config.dictConfig(LOGGING_CONF)
+
+logger = logging.getLogger("main")
+logger.info("loggers %s configured", ", ".join(LOGGING_CONF["loggers"]))
 ```
+Итак почему мне нравится этот способ: есть полный контроль над логгерами как в предыдущем способе, но вся настройка происходит в одном месте и выглядит более наглядно. К тому же объект конфигурации это просто словарь который позволяет использовать всю мощь языка Python, и упростить контроль в процессе разработки (а по моему это очень много).
+
+В примере, переменная DEBUG как раз для такого контроля, эта переменная может импортироваться из настроек проекта и определять поведение целевых логгеров. Это может помочь выводить проект в production - не придется ходить по модулям и править все `DEBUG = True` на `False`.
+
+В словаре-конфигурации, первая строка отключает объявленные ранее логгеры (может применяться например для отключения логгеров сторонних библиотек), вторая указывается только для обратной совместимости (в будущем этот параметр появится) и может быть только `1`. Дальше думаю все понятно: создаются шаблоны, обработчики и объявляются логгеры, к обработчикам добавляются шаблоны, к логгерам обработчики.
+
+Дальше с помощью метода `dictConfig` обрабатывается словарь-конфигурация, затем берется свежесозданный логгер `main` и выводится список имен описанных логгеров. Вывод может быть таким:
+```
+INFO     2018-05-20 22:43:12 [4_dictConfig.py:45] loggers main, slave configured
+```
+
+### [fileConfig](https://docs.python.org/3/library/logging.config.html#configuration-file-format)
+Загружает конфигурацию из файла, файл должен быть в формате библиотеки [configparser](https://docs.python.org/3/library/configparser.html). Мехнизм описания конфигурации в файле очень похож на словарь dictConfig -а. Сама конфигурация чуть более многословна, так же предоставляет полный контроль над логгерами.
+> По умолчанию disable_existing_loggers = True
+> Вместо непосредственно файла может принимать экземпляр класса RawConfigParser, что позволяет хранить конфигурацию проекта в одном файле.
+
+```
+import logging
+import logging.config
+
+logging.config.fileConfig("5_logging.conf")
+
+logger = logging.getLogger("simpleExample")
+
+logger.debug("debug message")
+logger.info("info message")
+logger.warn("warn message")
+logger.error("error message")
+logger.critical("critical message")
+```
+```
+[loggers]
+keys=root,simpleExample
+
+[handlers]
+keys=consoleHandler
+
+[formatters]
+keys=simpleFormatter
+
+[logger_root]
+level=DEBUG
+handlers=consoleHandler
+
+[logger_simpleExample]
+level=DEBUG
+handlers=consoleHandler
+qualname=simpleExample
+propagate=0
+
+[handler_consoleHandler]
+class=StreamHandler
+level=DEBUG
+formatter=simpleFormatter
+args=(sys.stdout,)
+
+[formatter_simpleFormatter]
+format=%(asctime)s - %(name)s - %(levelname)s - %(message)s
+datefmt=
+```
+и вывод будет:
+```
+2018-05-20 23:31:29,215 - simpleExample - DEBUG - debug message
+2018-05-20 23:31:29,216 - simpleExample - INFO - info message
+2018-05-20 23:31:29,216 - simpleExample - WARNING - warn message
+2018-05-20 23:31:29,216 - simpleExample - ERROR - error message
+2018-05-20 23:31:29,217 - simpleExample - CRITICAL - critical message
+```
+Код думаю понятен, переходим к седующему способу конфигурации.
+
+### [listen](https://docs.python.org/3/library/logging.config.html#logging.config.listen)
+Поднимает сокет, который слушает и загружает конфигурацию. Наверное применяется в больших, распределенных проектах. Я это не использовал поэтому без примеров.
+
+## Некоторые варианты использования
+### Наследование
