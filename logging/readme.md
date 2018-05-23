@@ -35,7 +35,7 @@ WARNING:root:Warning message
 * [filter](https://docs.python.org/3/library/logging.html#filter-objects) позволяет получить больший контроль над фильтрацией записей чем стандартные уровни логирования.
 > Базовый класс реализует только одно поведение: выстраивание иерархии логгеров при помощи имени логгера и точки. Например инициализирован логгер с именем `A.B`, тогда записи логгеров с именами `A.B.C`, `A.B.C.D`, `A.B.D` будут обработаны, а логгеров с именами `A.BB` или `B.B.C` отброшены.
 
-* [formatter](https://docs.python.org/3/library/logging.html#formatter-objects) является шаблоном для форматирования записи.
+* [formatter](https://docs.python.org/3/library/logging.html#formatter-objects) является шаблоном для форматирования записи. Возможные атрибуты для заполнения шаблона [здесь](https://docs.python.org/3/library/logging.html#logrecord-attributes)
 
 ## Способы конфигурации модуля.
 ### [basicConfig](https://docs.python.org/3/library/logging.html#logging.basicConfig)
@@ -116,7 +116,9 @@ logger.critical('critical message')
 * Далее получаем обработчики. Полный список с описанием [здесь](https://docs.python.org/3/library/logging.handlers.html) их много и они разные: вывод в консоль, запись в файл (возможно с ротацией логов), отправка через сокет, http, UDP, отправка письмом, чтение/запись в очередь и т.д. Далее в приимерах будут те что пользовался я сам.
 * Нужно четко понимать что у логгера может быть множество обработчиков, каждый обработчик может иметь свой шаблон сообщения, уровень логирования и фильтрацию. Поэтому в консоль попали все сообщения логгера, а в файл с уровнем `WARNING` и выше.
 * И наконец получаем шаблоны сообщений. Параметры для шаблонов [здесь](https://docs.python.org/3/library/logging.html?highlight=logging%20formatter#logrecord-attributes), основные параметры далее в примерах примерах.
-> Оптимизация. Процесс подстановки аргументов в шаблон ленивый, и произойдет только если запись действительно будет обрабатываться, однако вычисление аргуменов для логирования может быть долгим. Для того чтобы не терять время можно воспользоваться методом `isEnabledFor` логгера, который принимает уровень логирования, проверяет будет ли производится запись и возвращает ответ в `True` или `False`. Например:
+> Оптимизация. Процесс подстановки аргументов в шаблон ленивый, и произойдет только если запись действительно будет обрабатываться, поэтому в функцию логирования нужно передавать шаблон строки с аргументами, например `logger.debug("received params %s", a)`. Если же передавать заранее сформированную строку, то ресурсы  системы будут потрачены независимо от того будет запись занесена в лог или нет.
+
+> Оптимизация. Вычисление аргуменов для логирования может быть долгим. Для того чтобы не терять время можно воспользоваться методом `isEnabledFor` логгера, который принимает уровень логирования, проверяет будет ли производится запись и возвращает ответ в `True` или `False`. Например:
 ```
 if logger.isEnabledFor(logging.DEBUG):
     logger.debug('Message with %s', expensive_func())
@@ -246,3 +248,67 @@ datefmt=
 
 ## Некоторые варианты использования
 ### Наследование
+Как я уже упоминал, в логгерах, через имена, реализовано наследование. Рассмотрим пример:
+```
+import sys
+import logging
+
+# этот ужас из-за первой цифры в названии файла
+log_dict_conf = __import__("4_dictConfig")
+slave = __import__("6_inh_slave")
+
+logger = logging.getLogger("slave." + __name__)
+logger.debug("logger with name: %s created", logger.name)
+
+
+def simple_func(a, b, c):
+    s = slave.sum(a, b)
+    m = slave.mult(s, c)
+    logger.debug("received params %s, %s, %s; return %s", a, b, c, m)
+    return m
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:4]
+    if len(args) == 3:
+        logger.debug("received params from sys.argv")
+        args = list(map(int, args))
+    else:
+        args = [4, 5, 6]
+        logger.debug("load default params")
+    logger.info("received params %s, %s, %s", *args)
+    logger.info(simple_func(*args))
+```
+
+```
+import logging
+logger = logging.getLogger("slave." + __name__)
+logger.debug("logger with name: %s created", logger.name)
+
+
+def sum(a, b):
+    s = a + b
+    logger.debug("received params %s, %s; sum %s", a, b, s)
+    return s
+
+
+def mult(a, b):
+    m = a * b
+    logger.debug("received params %s, %s; multiply %s", a, b, m)
+    return m
+```
+выполнив `python 6_inh_main.py 1 2 3` в консоли получим:
+```
+INFO     2018-05-24 00:54:14 [4_dictConfig.py:45] loggers main, slave configured
+DEBUG    2018-05-24 00:54:14,411 slave.6_inh_slave logger with name: slave.6_inh_slave created
+DEBUG    2018-05-24 00:54:14,412 slave.__main__   logger with name: slave.__main__ created
+DEBUG    2018-05-24 00:54:14,412 slave.__main__   received params from sys.argv
+INFO     2018-05-24 00:54:14,412 slave.__main__   received params 1, 2, 3
+DEBUG    2018-05-24 00:54:14,412 slave.6_inh_slave received params 1, 2; sum 3
+DEBUG    2018-05-24 00:54:14,412 slave.6_inh_slave received params 3, 3; multiply 9
+DEBUG    2018-05-24 00:54:14,412 slave.__main__   received params 1, 2, 3; return 9
+INFO     2018-05-24 00:54:14,412 slave.__main__   9
+```
+Пройдем по порядку. Для начала имортируем модуль `4_dictConfig` в котором инициализируем логгеры, это он в первой строке сообщает какие логгеры были настроены. Мне нравится подход, при котром логгеры инициализируюися в одном модуле, и затем получаются getLogger -ом по необходимости.
+
+Затем имортируется модуль `6_inh_slave`, и в нем, при вызове getLogger -а к имени инициализированного логгера `slave` через точку добавлен `__name__` (вернет имя модуля если модуль импортируется), что определяет логгер-потомок `slave` -а с именем slave.6_inh_slave. Логгер-потомок наследует поведение логгера-родителя, однако теперь понятно из логгера какого модуля была сделана запись. Можно в наследовании подставлять имя пакета, название функционального блока или класса, здесь как душе угодно. 

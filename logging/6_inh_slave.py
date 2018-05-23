@@ -1,5 +1,6 @@
 import logging
 logger = logging.getLogger("slave." + __name__)
+logger.debug("logger with name: %s created", logger.name)
 
 
 def sum(a, b):
