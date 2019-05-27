@@ -84,26 +84,47 @@ class RabbitMQHandler(logging.Handler):
 
 
 if __name__ == "__main__":
-    logger = logging.getLogger("rmq")
-
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-
-    cons_handler = logging.StreamHandler()
-    cons_handler.setFormatter(formatter)
-
-    handler = RabbitMQHandler("host", "port", "login", "password", "exchange_name", "routing_key")
-    handler.setFormatter(formatter)
-    handler.setLevel(logging.DEBUG)
-
-    logger.addHandler(handler)
-    logger.addHandler(cons_handler)
-
-    logger.setLevel(logging.DEBUG)
-
-    logger.info("Start logging")
-
+    import logging.config
     import time
     import random
+
+    LOGGING_CONF = {
+        "version": 1,
+        "formatters": {
+            "brief": {
+                "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+            },
+        },
+        "handlers": {
+            "console": {
+                "level": "DEBUG",
+                "class": "logging.StreamHandler",
+                "formatter": "brief",
+            },
+            "rmq_handler": {
+                "level": "DEBUG",
+                "formatter": "brief",
+                "()": "rmq_handler.RabbitMQHandler",
+                "host": "*.*.*.*",
+                "port": 5672,
+                "login": "***",
+                "password": "***",
+                "exchange": "***",
+                "routing_key": "log." + __name__,
+            },
+        },
+        "loggers": {
+            "rmq": {
+                "level": "DEBUG",
+                "handlers": ["console", "rmq_handler"],
+            }
+        },
+    }
+    logging.config.dictConfig(LOGGING_CONF)
+    logger = logging.getLogger("rmq")
+
+    logger.info("Start logging")
 
     while True:
         sleep_in_sec = random.randrange(20)
